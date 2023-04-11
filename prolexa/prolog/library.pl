@@ -34,6 +34,9 @@
 
 :-op(900,fy,not).
 
+%! To handle anything false
+false(_).
+
 %%% Lists and sets
 
 % element(X,Ys) <- X is an element of the list Ys

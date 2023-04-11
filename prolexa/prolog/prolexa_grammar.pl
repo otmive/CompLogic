@@ -29,6 +29,10 @@ pred(penguin, 1,[n/penguin]).
 pred(sparrow, 1,[n/sparrow]).
 pred(fly,     1,[v/fly]).
 
+%! My stuff
+pred(happy,1,[a/happy]).
+pred(teacher,1,[n/teacher]).
+
 pred2gr(P,1,C/W,X=>Lit):-
 	pred(P,1,L),
 	member(C/W,L),
@@ -57,6 +61,16 @@ sword --> [that].
 sentence1(C) --> determiner(N,M1,M2,C),noun(N,M1),verb_phrase(N,M2).
 sentence1([(L:-true)]) --> proper_noun(N,X),verb_phrase(N,X=>L).
 
+%! My Sentences
+% e.g. Every thing that is happy is a teacher
+sentence1(C) --> determiner(N,M1,M2,C),[thing,that,is],adjective(N,M1),verb_phrase(N,M2).
+%! Negation
+% e.g. peter is not happy
+sentence1([(L:-false)]) --> proper_noun(N,X),negated_verb_phrase(N,X=>L).
+negated_verb_phrase(s,M) --> [is,not],property(s,M).
+negated_verb_phrase(p,M) --> [are,not],property(p,M).
+negated_verb_phrase(N,M) --> [never],iverb(N,M).
+
 verb_phrase(s,M) --> [is],property(s,M).
 verb_phrase(p,M) --> [are],property(p,M).
 verb_phrase(N,M) --> iverb(N,M).
@@ -72,6 +86,7 @@ determiner(p,X=>B,X=>H,[(H:-B)]) --> [all].
 
 proper_noun(s,tweety) --> [tweety].
 proper_noun(s,peter) --> [peter].
+proper_noun(s,john) --> [john].
 
 
 %%% questions %%%
@@ -104,7 +119,7 @@ command(g(retractall(prolexa:stored_rule(_,C)),"I erased it from my memory")) --
 command(g(retractall(prolexa:stored_rule(_,_)),"I am a blank slate")) --> forgetall. 
 command(g(all_rules(Answer),Answer)) --> kbdump. 
 command(g(all_answers(PN,Answer),Answer)) --> tellmeabout,proper_noun(s,PN).
-command(g(explain_question(Q,_,Answer),Answer)) --> [explain,why],sentence1([(Q:-true)]).
+command(g(explain_question(Q,_,Answer),Answer)) --> [explain,why],sentence(Q). 
 command(g(random_fact(Fact),Fact)) --> getanewfact.
 %command(g(pf(A),A)) --> peterflach. 
 %command(g(iai(A),A)) --> what. 

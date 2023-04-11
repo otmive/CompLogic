@@ -14,8 +14,8 @@
 
 prove_question(Query,SessionId,Answer):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
-	( prove_rb(Query,Rulebase) ->
-		transform(Query,Clauses),
+	( prove_rb(Query,Rulebase,Assertion,[],_) ->
+		transform(Query,Assertion,Clauses),
 		phrase(sentence(Clauses),AnswerAtomList),
 		atomics_to_string(AnswerAtomList," ",Answer)
 	; Answer = 'Sorry, I don\'t think this is the case'
@@ -24,8 +24,8 @@ prove_question(Query,SessionId,Answer):-
 % two-argument version that can be used in maplist/3 (see all_answers/2)
 prove_question(Query,Answer):-
 	findall(R,prolexa:stored_rule(_SessionId,R),Rulebase),
-	( prove_rb(Query,Rulebase) ->
-		transform(Query,Clauses),
+	( prove_rb(Query,Rulebase,Assertion,[],_) ->
+		transform(Query,Assertion,Clauses),
 		phrase(sentence(Clauses),AnswerAtomList),
 		atomics_to_string(AnswerAtomList," ",Answer)
 	; Answer = ""
@@ -33,11 +33,16 @@ prove_question(Query,Answer):-
 
 
 %%% Extended version of prove_question/3 that constructs a proof tree %%%
-explain_question(Query,SessionId,Answer):-
+explain_question([Query],SessionId,Answer):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
-	( prove_rb(Query,Rulebase,[],Proof) ->
+	( 	numbervars(Query,0,_),
+		Query=(H:-B),
+		prove_rb(H,Rulebase,Assertion,[],Proof) ->
+		(subsumes_term(B, Assertion) ->
+              true ;
+              fail),
 		maplist(pstep2message,Proof,Msg),
-		phrase(sentence1([(Query:-true)]),L),
+		phrase(sentence1([(H:-Assertion)]),L),
 		atomic_list_concat([therefore|L]," ",Last),
 		append(Msg,[Last],Messages),
 		atomic_list_concat(Messages,"; ",Answer)
@@ -55,33 +60,69 @@ pstep2message(n(Fact),Message):-
 %%% test if a rule can be deduced from stored rules %%%
 known_rule([Rule],SessionId):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
-	try((numbervars(Rule,0,_),
+	 try((numbervars(Rule,0,_),
 	     Rule=(H:-B),
-	     add_body_to_rulebase(B,Rulebase,RB2),
-	     prove_rb(H,RB2)
+	     %add_body_to_rulebase(B,Rulebase,RB2), %! This seemed to be completely pointless except to remove the singleton variables warning
+	     % Does there exists a proof for this rule, positively or negatively?
+		 prove_rb(H,Rulebase, Assertion, _,_),
+		 % If the assertion matches B then the rule is known
+		(subsumes_term(B, Assertion) ->
+              true ;
+              fail)
 	   )).
 
+%! Mine
+rule_conflict([Rule],SessionId,Reason):-
+	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
+	numbervars(Rule,0,_),
+	Rule=(H:-B),
+	%! Bracketed terms here. Either prove_rb will complete, and the subsumes_term will say whether the rule matched a true/false term
+	%! Or prove_rb will not complete, meaning that whatever the input rule could be parsed into was not represented in the rulebase
+	%! at all. In this case, conflict_rb will check whether the input rule conflicts with any of the rules in the rulebase, such as
+	%! if john is a teacher, and all teachers are happy, and the input rule is 'john is not happy', this will cause the conflict_rb
+	%! to return true.
+	((prove_rb(H,Rulebase,A1,[],Proof),
+	% Should resolve to true when B does not match assertion, and there is a conflict
+		(subsumes_term(B, A1) ->
+				fail ;
+				true)),(Res=A1);
+	conflict_rb(H,Rulebase,[],Proof),Res=false),
+	maplist(pstep2message,Proof,Msg),
+	phrase(sentence1([(H:-Res)]),L),
+	atomic_list_concat([therefore|L]," ",Last),
+	append(Msg,[Last],Messages),
+	atomic_list_concat(Messages,"; ",Reason).
+
+conflict_rb(A,Rulebase,P0,P):-
+	find_clause((B:-A),Rule,Rulebase),
+	prove_rb(B,Rulebase,Assertion,[p(A,Rule)|P0],P), %! B = happy(peter), which will return false as the assertion
+	(subsumes_term(true, Assertion) -> %! The result of the proof of the dependant term should be true.
+				fail ;
+				true).
+
+%! Redundant
 add_body_to_rulebase((A,B),Rs0,Rs):-!,
 	add_body_to_rulebase(A,Rs0,Rs1),
 	add_body_to_rulebase(B,Rs1,Rs).
-add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]).
+add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]). 
 
 
 %%% meta-interpreter that constructs proofs %%%
 
 % 3d argument is accumulator for proofs
-prove_rb(true,_Rulebase,P,P):-!.
-prove_rb((A,B),Rulebase,P0,P):-!,
+prove_rb(true,_Rulebase,true,P,P):-!.
+prove_rb(false,_Rulebase,false,P,P):-!.
+prove_rb((A,B),Rulebase,Assertion,P0,P):-!,
 	find_clause((A:-C),Rule,Rulebase),
 	conj_append(C,B,D),
-    prove_rb(D,Rulebase,[p((A,B),Rule)|P0],P).
-prove_rb(A,Rulebase,P0,P):-
+    prove_rb(D,Rulebase,Assertion,[p((A,B),Rule)|P0],P).
+prove_rb(A,Rulebase,Assertion,P0,P):-
     find_clause((A:-B),Rule,Rulebase),
-	prove_rb(B,Rulebase,[p(A,Rule)|P0],P).
+	prove_rb(B,Rulebase,Assertion,[p(A,Rule)|P0],P).
 
 % top-level version that ignores proof
 prove_rb(Q,RB):-
-	prove_rb(Q,RB,[],_P).
+	prove_rb(Q,RB,_,[],_P).
 
 
 %%% Utilities from nl_shell.pl %%%
@@ -92,9 +133,9 @@ find_clause(Clause,Rule,[_Rule|Rules]):-
 	find_clause(Clause,Rule,Rules).
 
 % transform instantiated, possibly conjunctive, query to list of clauses
-transform((A,B),[(A:-true)|Rest]):-!,
-    transform(B,Rest).
-transform(A,[(A:-true)]).
+transform((A,B),Val,[(A:-Val)|Rest]):-!,
+    transform(B,Val,Rest).
+transform(A,Val,[(A:-Val)]).
 
 
 %%% Two more commands: all_rules/1 and all_answers/2

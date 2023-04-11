@@ -21,6 +21,10 @@
 %some intial stored rules
 stored_rule(1,[(mortal(X):-human(X))]).
 stored_rule(1,[(human(peter):-true)]).
+stored_rule(1,[(happy(X):-teacher(X))]).
+stored_rule(1,[(human(john):-true)]).
+stored_rule(1,[(teacher(john):-true)]).
+stored_rule(1,[(happy(peter):-false)]).
 
 
 %%% Prolexa Command Line Interface %%%
@@ -48,6 +52,10 @@ handle_utterance(SessionId,Utterance,Answer):-
 	  write_debug(rule(Rule)),
 	  ( known_rule(Rule,SessionId) -> % A1. It follows from known rules
 			atomic_list_concat(['I already knew that',Utterance],' ',Answer)
+	  ; % TODO: Check if the rule conflicts with the knowledge base
+	    %! The answer should be constructed in a similar way to explaining a question
+	    rule_conflict(Rule,SessionId,Reason) ->
+			atomic_list_concat(['It cannot be the case that',Utterance,'because',Reason],' ',Answer)
 	  ; otherwise -> % A2. It doesn't follow, so add to stored rules
 			assertz(prolexa:stored_rule(SessionId,Rule)),
 			atomic_list_concat(['I will remember that',Utterance],' ',Answer)
