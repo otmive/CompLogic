@@ -25,6 +25,7 @@ stored_rule(1,[(happy(X):-teacher(X))]).
 stored_rule(1,[(human(john):-true)]).
 stored_rule(1,[(teacher(john):-true)]).
 stored_rule(1,[(happy(peter):-false)]).
+stored_rule(1, [(bird(sk):-true),  (penguin(sk):-true)]).
 
 
 %%% Prolexa Command Line Interface %%%

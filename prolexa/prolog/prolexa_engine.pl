@@ -71,6 +71,17 @@ known_rule([Rule],SessionId):-
               fail)
 	   )).
 
+%? checks if a rule consisting of 2 parts (bird(sk):-true, penguin(sk):-true) is stored in rulebase
+known_rule([R1,R2],SessionId):-
+	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
+	Rule=[R1,R2],
+	 try((numbervars(Rule,0,_),
+		(member(Rule, Rulebase) ->
+              true ;
+              fail)
+	   )).
+
+
 %! Mine
 rule_conflict([Rule],SessionId,Reason):-
 	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
@@ -119,6 +130,10 @@ prove_rb((A,B),Rulebase,Assertion,P0,P):-!,
 prove_rb(A,Rulebase,Assertion,P0,P):-
     find_clause((A:-B),Rule,Rulebase),
 	prove_rb(B,Rulebase,Assertion,[p(A,Rule)|P0],P).
+% prove_rb((A,B),Rulebase, true, P, P):-
+% 	find_clause([(A:-true),(B:-true)],Rulebase),
+% 	find_clause((B:-C),Rulebase),
+% 	prove_rb(C,Rulebase).
 
 % top-level version that ignores proof
 prove_rb(Q,RB):-
@@ -131,6 +146,7 @@ find_clause(Clause,Rule,[Rule|_Rules]):-
 	copy_term(Rule,[Clause]).	% do not instantiate Rule
 find_clause(Clause,Rule,[_Rule|Rules]):-
 	find_clause(Clause,Rule,Rules).
+	% add find clause with 2 parts
 
 % transform instantiated, possibly conjunctive, query to list of clauses
 transform((A,B),Val,[(A:-Val)|Rest]):-!,

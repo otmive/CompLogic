@@ -66,7 +66,15 @@ sentence1([(L:-true)]) --> proper_noun(N,X),verb_phrase(N,X=>L).
 sentence1(C) --> determiner(N,M1,M2,C),[thing,that,is],adjective(N,M1),verb_phrase(N,M2).
 %! Negation
 % e.g. peter is not happy
-sentence1([(L:-false)]) --> proper_noun(N,X),negated_verb_phrase(N,X=>L).
+sentence1([(L:-false)]) --> proper_noun(N,X),negated_verb_phrase(N,X=>L).  % false :- peter is happy <- check negation is working correctly
+% too many sentence1s  
+% L is list of words in a sentence 
+% [some, X, are, not, Y]
+% false is in the wrong place maybe? 
+
+% %? negation with existential quantifier (some birds are not penguins)
+sentence1(C) --> determiner(N,M1,M2,C),noun(N,M1),negated_verb_phrase(N,M2).
+
 negated_verb_phrase(s,M) --> [is,not],property(s,M).
 negated_verb_phrase(p,M) --> [are,not],property(p,M).
 negated_verb_phrase(N,M) --> [never],iverb(N,M).
@@ -79,10 +87,13 @@ property(N,M) --> adjective(N,M).
 property(s,M) --> [a],noun(s,M).
 property(p,M) --> noun(p,M).
 
+% %? allow 'some' with 'not'
+determiner(p,sk=>H1,sk=>H2,[(H1:-true),(H2:-false)]) --> [some].
+
 determiner(s,X=>B,X=>H,[(H:-B)]) --> [every].
 determiner(p,X=>B,X=>H,[(H:-B)]) --> [all].
 %determiner(p,X=>B,X=>H,[(H:-B)]) --> [].
-%determiner(p, sk=>H1, sk=>H2, [(H1:-true),(H2 :- true)]) -->[some].
+determiner(p, sk=>H1, sk=>H2, [(H1:-true),(H2 :- true)]) -->[some].
 
 proper_noun(s,tweety) --> [tweety].
 proper_noun(s,peter) --> [peter].
@@ -100,8 +111,8 @@ qword --> [].
 question1(Q) --> [who],verb_phrase(s,_X=>Q).
 question1(Q) --> [is], proper_noun(N,X),property(N,X=>Q).
 question1(Q) --> [does],proper_noun(_,X),verb_phrase(_,X=>Q).
-%question1((Q1,Q2)) --> [are,some],noun(p,sk=>Q1),
-%					  property(p,sk=>Q2).
+question1((Q1,Q2)) --> [are,some],noun(p,sk=>Q1),
+					  property(p,sk=>Q2).
 
 
 %%% commands %%%
