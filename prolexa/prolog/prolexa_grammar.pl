@@ -29,6 +29,11 @@ pred(penguin, 1,[n/penguin]).
 pred(sparrow, 1,[n/sparrow]).
 pred(fly,     1,[v/fly]).
 
+%? Beth's stuff
+pred(genius,1,[n/genius]).
+pred(prize,1,[n/prize]).
+pred(win,1,[v/win]).
+
 %! My stuff
 pred(happy,1,[a/happy]).
 pred(teacher,1,[n/teacher]).
@@ -41,6 +46,7 @@ pred2gr(P,1,C/W,X=>Lit):-
 noun_s2p(Noun_s,Noun_p):-
 	( Noun_s=woman -> Noun_p=women
 	; Noun_s=man -> Noun_p=men
+	; Noun_s=genius -> Noun_p=geniuses
 	; atom_concat(Noun_s,s,Noun_p)
 	).
 
@@ -72,8 +78,10 @@ sentence1([(L:-false)]) --> proper_noun(N,X),negated_verb_phrase(N,X=>L).  % fal
 % [some, X, are, not, Y]
 % false is in the wrong place maybe? 
 
+% sentence1([(M1:-true),(M2:-true)]) --> determiner(N,M1,M2,_),noun(N,M1),verb_phrase(N,M2).
+
 % %? negation with existential quantifier (some birds are not penguins)
-sentence1(C) --> determiner(N,M1,M2,C),noun(N,M1),negated_verb_phrase(N,M2).
+sentence1([(M1:-true),(M2:-false)]) --> determiner(N,M1,M2,_),noun(N,M1),negated_verb_phrase(N,M2).
 
 negated_verb_phrase(s,M) --> [is,not],property(s,M).
 negated_verb_phrase(p,M) --> [are,not],property(p,M).
@@ -81,19 +89,21 @@ negated_verb_phrase(N,M) --> [never],iverb(N,M).
 
 verb_phrase(s,M) --> [is],property(s,M).
 verb_phrase(p,M) --> [are],property(p,M).
+verb_phrase(N,M) --> iverb(N,M),[prizes].
 verb_phrase(N,M) --> iverb(N,M).
 
 property(N,M) --> adjective(N,M).
 property(s,M) --> [a],noun(s,M).
 property(p,M) --> noun(p,M).
 
-% %? allow 'some' with 'not'
-determiner(p,sk=>H1,sk=>H2,[(H1:-true),(H2:-false)]) --> [some].
+
 
 determiner(s,X=>B,X=>H,[(H:-B)]) --> [every].
 determiner(p,X=>B,X=>H,[(H:-B)]) --> [all].
-%determiner(p,X=>B,X=>H,[(H:-B)]) --> [].
+determiner(p,X=>B,X=>H,[(H:-B)]) --> [].
 determiner(p, sk=>H1, sk=>H2, [(H1:-true),(H2 :- true)]) -->[some].
+% %? allow 'some' with 'not'
+determiner(p,sk=>H1,sk=>H2,[(H1:-true),(H2:-false)]) --> [some].
 
 proper_noun(s,tweety) --> [tweety].
 proper_noun(s,peter) --> [peter].

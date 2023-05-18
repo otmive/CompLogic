@@ -49,6 +49,20 @@ explain_question([Query],SessionId,Answer):-
 	; Answer = 'Sorry, I don\'t think this is the case'
 	).
 
+explain_question([Q1,Q2], SessionId, Answer):-
+	findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
+	( 	Q1=(H1:-true),
+		Q2=(H2:-Assertion),
+		prove_rb((H1,H2),Rulebase,Assertion,[],Proof) ->
+		maplist(pstep2message,Proof,Msg),
+		list_to_set(Msg, Msg2),
+		phrase(sentence1([(Q1),(Q2)]),L),
+		atomic_list_concat([therefore|L]," ",Last),
+		append(Msg2,[Last],Messages),
+		atomic_list_concat(Messages,"; ",Answer)
+	; Answer = 'Sorry, I don\'t think this is the case'
+	).
+
 % convert proof step to message
 pstep2message(p(_,Rule),Message):-
 	rule2message(Rule,Message).
@@ -121,6 +135,22 @@ add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]).
 %%% meta-interpreter that constructs proofs %%%
 
 % 3d argument is accumulator for proofs
+prove_rb([true,true],_Rulebase,P,P) :- !.
+prove_rb((A,C),Rulebase,P0,P):-
+	find_clause([(A:-B),D],Rule,Rulebase),
+	(
+		var(D) ->  		%%% D is uninstantiated
+		prove_rb([B,C],Rulebase,[p(A,Rule)|P0],P) 
+		; 
+		D = (C:-E),
+		prove_rb([B,E],Rulebase,[p(A,Rule),p(C,Rule)|P0],P)
+	).
+prove_rb((A,B),Rulebase, true, P, P):-
+	Query = [(A:-true),(B:-true)],
+	find_clause(Query, Rule, Rulebase),
+	find_clause((B:-C), Rule, Rulebase),
+	prove_rb(C,Rulebase).
+	
 prove_rb(true,_Rulebase,true,P,P):-!.
 prove_rb(false,_Rulebase,false,P,P):-!.
 prove_rb((A,B),Rulebase,Assertion,P0,P):-!,
@@ -130,15 +160,10 @@ prove_rb((A,B),Rulebase,Assertion,P0,P):-!,
 prove_rb(A,Rulebase,Assertion,P0,P):-
     find_clause((A:-B),Rule,Rulebase),
 	prove_rb(B,Rulebase,Assertion,[p(A,Rule)|P0],P).
-% prove_rb((A,B),Rulebase, true, P, P):-
-% 	find_clause([(A:-true),(B:-true)],Rulebase),
-% 	find_clause((B:-C),Rulebase),
-% 	prove_rb(C,Rulebase).
 
 % top-level version that ignores proof
 prove_rb(Q,RB):-
 	prove_rb(Q,RB,_,[],_P).
-
 
 %%% Utilities from nl_shell.pl %%%
 
@@ -147,6 +172,28 @@ find_clause(Clause,Rule,[Rule|_Rules]):-
 find_clause(Clause,Rule,[_Rule|Rules]):-
 	find_clause(Clause,Rule,Rules).
 	% add find clause with 2 parts
+% find_clause(Clause,Rule,[Rule|_Rules]):-
+% 	copy_term(Rule,Clause).	#
+find_clause(Clause,Rule,[Rule|_Rules]):-
+	Rule = [Rule1|Rule2],
+	(
+		Clause = [Clause1,Clause2] ->
+		(
+			copy_term([Rule1],[Clause1]) ->
+			( Rule2 = [El|_] -> Clause2 = El ; true )
+			; copy_term(Rule2,[Clause1]),
+			Clause2 = Rule1
+		)
+		;
+		(
+			copy_term([Rule1],[Clause]) ->
+			true
+		; 	copy_term(Rule2,[Clause])
+		)
+	).
+
+find_clause(Clause,Rule,[_Rule|Rules]):- 
+	find_clause(Clause,Rule,Rules).
 
 % transform instantiated, possibly conjunctive, query to list of clauses
 transform((A,B),Val,[(A:-Val)|Rest]):-!,
@@ -177,5 +224,4 @@ all_answers(PN,Answer):-
 	( Messages=[] -> atomic_list_concat(['I know nothing about',PN],' ',Answer)
 	; otherwise -> atomic_list_concat(Messages,". ",Answer)
 	).
-
 
