@@ -135,11 +135,10 @@ add_body_to_rulebase(A,Rs0,[[(A:-true)]|Rs0]).
 %%% meta-interpreter that constructs proofs %%%
 
 % 3d argument is accumulator for proofs
-prove_rb([true,true],_Rulebase,P,P) :- !.
 prove_rb((A,C),Rulebase,P0,P):-
 	find_clause([(A:-B),D],Rule,Rulebase),
 	(
-		var(D) ->  		%%% D is uninstantiated
+		var(D) ->  		
 		prove_rb([B,C],Rulebase,[p(A,Rule)|P0],P) 
 		; 
 		D = (C:-E),
@@ -172,28 +171,16 @@ find_clause(Clause,Rule,[Rule|_Rules]):-
 find_clause(Clause,Rule,[_Rule|Rules]):-
 	find_clause(Clause,Rule,Rules).
 	% add find clause with 2 parts
-% find_clause(Clause,Rule,[Rule|_Rules]):-
-% 	copy_term(Rule,Clause).	#
-find_clause(Clause,Rule,[Rule|_Rules]):-
-	Rule = [Rule1|Rule2],
+find_clause(Clause, Rule, [Rule|_Rules]):-
+	Rule = [R1|R2],
 	(
-		Clause = [Clause1,Clause2] ->
-		(
-			copy_term([Rule1],[Clause1]) ->
-			( Rule2 = [El|_] -> Clause2 = El ; true )
-			; copy_term(Rule2,[Clause1]),
-			Clause2 = Rule1
-		)
-		;
-		(
-			copy_term([Rule1],[Clause]) ->
-			true
-		; 	copy_term(Rule2,[Clause])
-		)
+		copy_term([R1],[Clause]) ->
+		true
+	; 	copy_term(R2,[Clause])
 	).
 
-find_clause(Clause,Rule,[_Rule|Rules]):- 
-	find_clause(Clause,Rule,Rules).
+
+
 
 % transform instantiated, possibly conjunctive, query to list of clauses
 transform((A,B),Val,[(A:-Val)|Rest]):-!,
