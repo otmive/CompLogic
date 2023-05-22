@@ -88,13 +88,13 @@ We also defined the irregular plural of the noun 'genius'.
 ```
 noun_s2p(Noun_s,Noun_p):-
 
-( Noun_s=woman -> Noun_p=women
+    ( Noun_s=woman -> Noun_p=women
 
-; Noun_s=man -> Noun_p=men
+    ; Noun_s=man -> Noun_p=men
 
-; Noun_s=genius -> Noun_p=geniuses
+    ; Noun_s=genius -> Noun_p=geniuses
 
-; atom_concat(Noun_s,s,Noun_p)
+    ; atom_concat(Noun_s,s,Noun_p)
 
 ).
 ```
@@ -109,26 +109,29 @@ The final step needed for Prolexa to be able to handle existential quantificatio
 ```
 known_rule([R1,R2],SessionId):-
 
-findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
+    findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
 
-Rule=[R1,R2],
+    Rule=[R1,R2],
 
-try((numbervars(Rule,0,_),
+    try((numbervars(Rule,0,_),
 
-(member(Rule, Rulebase) ->
+    (member(Rule, Rulebase) ->
 
-true ;
+    true ;
 
-fail)
+    fail)
 
 )).
 ```
 
 ### Example 
 
-Q: 'some humans are geniuses'
+Q: 'some humans are geniuses'.
+
 A: I will remember that some humans are geniuses
-Q: 'are some humans geniuses'
+
+Q: 'are some humans geniuses'.
+
 A: some humans are geniuses
 
 ### Reasoning Explanation
@@ -140,27 +143,27 @@ An additional `explain_question` rule was added which matches with sentences con
 ```
 explain_question([Q1,Q2], SessionId, Answer):-
 
-findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
+    findall(R,prolexa:stored_rule(SessionId,R),Rulebase),
 
-( Q1=(H1:-true),
+    ( Q1=(H1:-true),
 
-Q2=(H2:-Assertion),
+    Q2=(H2:-Assertion),
 
-prove_rb((H1,H2),Rulebase,Assertion,[],Proof) ->
+    prove_rb((H1,H2),Rulebase,Assertion,[],Proof) ->
 
-maplist(pstep2message,Proof,Msg),
+    maplist(pstep2message,Proof,Msg),
 
-list_to_set(Msg, Msg2),
+    list_to_set(Msg, Msg2),
 
-phrase(sentence1([(Q1),(Q2)]),L),
+    phrase(sentence1([(Q1),(Q2)]),L),
 
-atomic_list_concat([therefore|L]," ",Last),
+    atomic_list_concat([therefore|L]," ",Last),
 
-append(Msg2,[Last],Messages),
+    append(Msg2,[Last],Messages),
 
-atomic_list_concat(Messages,"; ",Answer)
+    atomic_list_concat(Messages,"; ",Answer)
 
-; Answer = 'Sorry, I don\'t think this is the case'
+    ; Answer = 'Sorry, I don\'t think this is the case'
 
 ).
 ```
@@ -169,29 +172,29 @@ Additional `prove_rb` rules were also added to enable proving new sentences cons
 ```
 prove_rb((A,C),Rulebase,P0,P):-
 
-find_clause([(A:-B),D],Rule,Rulebase),
+    find_clause([(A:-B),D],Rule,Rulebase),
 
-(
+    (
 
-var(D) -> 
+    var(D) -> 
 
-prove_rb([B,C],Rulebase,[p(A,Rule)|P0],P)
+    prove_rb([B,C],Rulebase,[p(A,Rule)|P0],P)
 
-;
+    ;
 
-D = (C:-E),
+    D = (C:-E),
 
-prove_rb([B,E],Rulebase,[p(A,Rule),p(C,Rule)|P0],P)
+    prove_rb([B,E],Rulebase,[p(A,Rule),p(C,Rule)|P0],P)
 
 ).
 
 prove_rb((A,B),Rulebase, true, P, P):-
 
-Query = [(A:-true),(B:-true)],
+    Query = [(A:-true),(B:-true)],
 
-find_clause(Query, Rule, Rulebase),
+    find_clause(Query, Rule, Rulebase),
 
-find_clause((B:-C), Rule, Rulebase),
+    find_clause((B:-C), Rule, Rulebase),
 
 prove_rb(C,Rulebase).
 ```
@@ -200,15 +203,15 @@ These new rules allow for the sentences of the form `(X:-true), (Y:-true)` to be
 ```
 find_clause(Clause, Rule, [Rule|_Rules]):-
 
-Rule = [R1|R2],
+    Rule = [R1|R2],
 
-(
+    (
 
-copy_term([R1],[Clause]) ->
+    copy_term([R1],[Clause]) ->
 
-true
+    true
 
-; copy_term(R2,[Clause])
+    ; copy_term(R2,[Clause])
 
 ).
 ```
@@ -222,10 +225,15 @@ determiner(p,X=>B,X=>H,[(H:-B)]) --> [].
 The following example uses no initial stored rules. 
 
 Q: 'some humans are geniuses'.
+
 A: I will remember that some humans are genisues. 
+
 Q:  'geniuses win prizes'.
+
 A: I will remember that geniuses win prizes.
+
 Q: 'explain why some humans win prizes'.
+
 A: some humans are geniuses; every genius wins prizes; therefore some humans win prizes
 
 
@@ -240,7 +248,10 @@ A limitation of this implementation is that it is not able to handle explanation
 
 ### Example
 
-Q: 'some humans are not geniuses'
+Q: 'some humans are not geniuses'.
+
 A: I will remember that some humans are not geniuses
-Q: 'are some humans geniuses'
+
+Q: 'are some humans geniuses'.
+
 A: Sorry, I don't think this is the case 
